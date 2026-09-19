@@ -11,12 +11,14 @@ const MakeHeaders = (env: Env) => ({
 });
 
 export async function GetScriptsInDispatchNamespace(env: Env): Promise<ApiScript[]> {
-  const data = (await (
-    await fetch(ScriptsURI(env), {
-      method: 'GET',
-      headers: MakeHeaders(env),
-    })
-  ).json()) as { result: ApiScript[] };
+  const response = await fetch(ScriptsURI(env), {
+    method: 'GET',
+    headers: MakeHeaders(env),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const data = (await response.json()) as { result: ApiScript[] };
   return Promise.all(
     data.result.map(
       async (result): Promise<ApiScriptWithTags> => ({
@@ -33,12 +35,14 @@ export async function GetScriptsInDispatchNamespace(env: Env): Promise<ApiScript
 
 export async function GetScriptsByTags(env: Env, tags: { tag: string; allow: boolean }[]): Promise<ApiScript[]> {
   const uriTags = tags.map((tag) => `${tag.tag}:${tag.allow ? 'yes' : 'no'}`).join(',');
-  const data = (await (
-    await fetch(`${ScriptsURI(env)}?tags=${uriTags}`, {
-      method: 'GET',
-      headers: MakeHeaders(env),
-    })
-  ).json()) as { result: ApiScript[] };
+  const response = await fetch(`${ScriptsURI(env)}?tags=${uriTags}`, {
+    method: 'GET',
+    headers: MakeHeaders(env),
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const data = (await response.json()) as { result: ApiScript[] };
   return data.result;
 }
 
