@@ -176,6 +176,9 @@ export default {
   async function setScriptsInSelector() {
     const selector = document.getElementById("outbound_selector");
     const response = await getScripts();
+    if (!response.ok) {
+      return;
+    }
     const data = await response.json();
     data.map((script) => {
       var option = document.createElement("option");

@@ -19,7 +19,21 @@ import { DispatchLimits, OutboundWorker, WorkerArgs } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/favicon.cio', () => {
+const parseOptionalLimit = (value: unknown): number | undefined => {
+  if (value === '' || value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' && typeof value !== 'string') {
+    throw new Error('Expected limit to be a number');
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error('Expected limit to be a non-negative number');
+  }
+  return parsed;
+};
+
+app.get('/favicon.ico', () => {
   return new Response();
 });
 
@@ -66,8 +80,12 @@ app.get('/', withDb, async (c) => {
  * Initialize example data
  */
 app.get('/init', withDb, async (c) => {
-  const scripts = await GetScriptsInDispatchNamespace(c.env);
-  await Promise.all(scripts.map(async (script) => DeleteScriptInDispatchNamespace(c.env, script.id)));
+  try {
+    const scripts = await GetScriptsInDispatchNamespace(c.env);
+    await Promise.all(scripts.map(async (script) => DeleteScriptInDispatchNamespace(c.env, script.id)));
+  } catch (e) {
+    console.log(JSON.stringify(e, Object.getOwnPropertyNames(e)));
+  }
   await Initialize(c.var.db);
   return Response.redirect(c.req.url.replace('/init', ''));
 });
@@ -168,8 +186,19 @@ app.put('/script/:name', withDb, withCustomer, async (c) => {
       };
     };
 
+    if (typeof data.script !== 'string') {
+      throw new Error('Expected script to be a string');
+    }
+    if (!data.dispatch_config || typeof data.dispatch_config.outbound !== 'string') {
+      throw new Error('Expected dispatch_config.outbound to be a string');
+    }
+
     scriptContent = data.script;
-    limits = { script_id: scriptName, ...data.dispatch_config.limits };
+    limits = {
+      script_id: scriptName,
+      cpuMs: parseOptionalLimit(data.dispatch_config.limits?.cpuMs),
+      memory: parseOptionalLimit(data.dispatch_config.limits?.memory),
+    };
     outbound = { script_id: scriptName, outbound_script_id: data.dispatch_config.outbound };
   } catch (e) {
     return c.text('Expected json: { script: string, dispatch_config: { limits?: { cpuMs: number, memory: number }, outbound: string }}', 400);

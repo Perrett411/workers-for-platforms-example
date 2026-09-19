@@ -105,9 +105,19 @@ export async function GetCustomerFromToken(db: D1QB, token: string): Promise<Cus
 }
 
 export async function AddDispatchLimits(db: D1QB, dispatchLimits: DispatchLimits) {
-  return db.insert({
-    tableName: 'dispatch_limits',
-    data: dispatchLimits as unknown as Record<string, string>,
+  return db.execute({
+    query: `
+      INSERT OR REPLACE INTO dispatch_limits (
+        script_id,
+        cpuMs,
+        memory
+      ) VALUES (?, ?, ?)
+    `,
+    arguments: [
+      dispatchLimits.script_id,
+      dispatchLimits.cpuMs ?? null,
+      dispatchLimits.memory ?? null,
+    ],
   });
 }
 
@@ -123,9 +133,17 @@ export async function GetDispatchLimitFromScript(db: D1QB, scriptName: string): 
 }
 
 export async function AddOutboundWorker(db: D1QB, outboundWorker: OutboundWorker) {
-  return db.insert({
-    tableName: 'outbound_workers',
-    data: outboundWorker as unknown as Record<string, string>,
+  return db.execute({
+    query: `
+      INSERT OR REPLACE INTO outbound_workers (
+        script_id,
+        outbound_script_id
+      ) VALUES (?, ?)
+    `,
+    arguments: [
+      outboundWorker.script_id,
+      outboundWorker.outbound_script_id,
+    ],
   });
 }
 
